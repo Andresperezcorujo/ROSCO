@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Rosco - Pasapalabra</title>
+  <style>
+    body {
+      text-align: center;
+      font-family: sans-serif;
+      background-color: #7989e4 !important;
+    }
+    #rosco {
+      position: relative;
+      width: 300px;
+      height: 300px;
+      margin: 20px auto;
+      border: 1px solid #ccc;
+    }
+    .letra {
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      background-color: WHITE;
+      color: #3498db;
+      border-radius: 50%;
+      text-align: center;
+      line-height: 40px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .letra.usada { pointer-events: none; opacity: 0.5; }
+   .letra.acierto {
+  background-color: rgba(8, 245, 8, 0.849) !important;
+  color: white !important;
+}
+.letra.error {
+  background-color: rgb(206, 14, 14) !important;
+  color: white !important;
+}
+.letra.pasapalabra {
+  background-color: rgb(72, 255, 0) !important;
+  color: white !important;
+}
+
+    .letra:hover { transform: scale(1.2); }
+    #pregunta-container, #ranking-container { margin-top: 30px; }
+    input[type="text"] { padding: 5px; font-size: 16px; }
+    button { padding: 6px 10px; margin: 3px; }
+    table { margin: 20px auto; border-collapse: collapse; width: 80%; }
+    th, td { border: 1px solid #999; padding: 8px; }
+    th { background-color: #696bf7; }
+    #inicio-juego { margin-top: 20px; }
+    #tiempo { font-weight: bold; font-size: 18px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <h1>Rosco - Pasapalabra</h1>
+  <div id="inicio-juego">
+    <input type="text" id="nombreJugador" placeholder="Tu nombre">
+    <button onclick="iniciarJuego()">Iniciar juego</button>
+  </div>
+  <div id="rosco" style="display:none;"></div>
+  <div id="pregunta-container" style="display:none;">
+    <p id="pregunta">Presioná una letra para comenzar</p>
+    <input type="text" id="respuesta" placeholder="Escribí tu respuesta">
+    <button onclick="verificarRespuesta()">Responder</button>
+    <button onclick="pasapalabra()">Pasapalabra</button>
+    <p id="tiempo">⏱ Tiempo restante: 180s</p>
+  </div>
+  <div id="resultado" style="display:none;">
+    <p>Aciertos: <span id="aciertos">0</span> | Errores: <span id="errores">0</span></p>
+  </div>
+  <div id="ranking-container">
+    <h2>🏆 Ranking Histórico</h2>
+    <table id="tablaRanking">
+      <thead>
+        <tr>
+          <th>Nombre</th>
+          <th>Aciertos</th>
+          <th>Errores</th>
+          <th>Tiempo (s)</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+  <script>
+    const preguntas = {
+  A: { pregunta: "Empieza con A: País del nacimiento del papa Francisco.", respuesta: "argentina" },
+  B: { pregunta: "Empieza con B: Movimiento artístico europeo.", respuesta: "barroco" },
+  C: { pregunta: "Empieza con C: El uso de la fuerza o de intimidación para forzar una acción o para modificar o restringir la conducta.", respuesta: "coercion" },
+  D: { pregunta: "Empieza con D: 'Pienso luego existo'.", respuesta: "descartes" },
+  E: { pregunta: "Empieza con E: Que provoca vergüenza.", respuesta: "embarazoso" },
+  F: { pregunta: "Empieza con F: Género musical gitano, que nació y se desarrolló en Andalucía.", respuesta: "flamenco" },
+  G: { pregunta: "Empieza con G: Persona encargada de escribir un guion o libreto para cine, radio, televisión, etc.", respuesta: "guionista" },
+  H: { pregunta: "Empieza con H: Este día.", respuesta: "hoy" },
+  I: { pregunta: "Empieza con I: Falta de conocimiento.", respuesta: "ignorancia" },
+  J: { pregunta: "Empieza con J: Actividad lúdica.", respuesta: "juego" },
+  K: { pregunta: "Empieza con K: Arte marcial.", respuesta: "karate" },
+  L: { pregunta: "Empieza con L: Lugar del 'Infierno de Dante' donde están los virtuosos no bautizados.", respuesta: "limbo" },
+  M: { pregunta: "Empieza con M: Considerar indigno o inferior; no dar el aprecio o valor que se merece algo o a alguien.", respuesta: "menospreciar" },
+  N: { pregunta: "Empieza con N: Deidad femenina de la naturaleza en mitología.", respuesta: "ninfa" },
+  Ñ: { pregunta: "Contiene Ñ: País de Europa.", respuesta: "españa" },
+  O: { pregunta: "Empieza con O: Que procede de, o tiene su origen en, el lugar que se indica.", respuesta: "oriundo" },
+  P: { pregunta: "Empieza con P: País sudamericano cuya capital es Lima.", respuesta: "peru" },
+  Q: { pregunta: "Empieza con Q: Hidalgo protagonista de la novela de Cervantes.", respuesta: "quijote" },
+  R: { pregunta: "Empieza con R: Movimiento cultural surgido en Europa durante los siglos XV y XVI.", respuesta: "renacimiento" },
+  S: { pregunta: "Empieza con S: Criatura mitológica con torso de mujer y cola de pez.", respuesta: "sirena" },
+  T: { pregunta: "Empieza con T: El espacio que media de un paraje a otro.", respuesta: "travesia" },
+  U: { pregunta: "Empieza con U: Institución académica.", respuesta: "universidad" },
+  V: { pregunta: "Empieza con V: Que tiene apariencia de verdadero.", respuesta: "verosimil" },
+  W: { pregunta: "Empieza con W: Tecnología de conexión inalámbrica.", respuesta: "wifi" },
+  X: { pregunta: "Contiene X: Prueba médica que permite ver el interior del cuerpo.", respuesta: "rayos x" },
+  Y: { pregunta: "Empieza con Y: Juguete que sube y baja con un hilo.", respuesta: "yoyo" },
+  Z: { pregunta: "Empieza con Z: Sonido que hacen algunos insectos como el mosquito.", respuesta: "zumbido" }
+};
+    let nombreJugador = "";
+    let inicioTiempo = null;
+    let letraActual = '';
+    let aciertos = 0;
+    let errores = 0;
+    let timer = 180;
+    let intervalo = null;
+    let pasadas = [];
+    let inRevancha = false;
+    const letras = "ABCDEFGHIJKLMNÑOPQRSTUVWXYZ".split('');
+
+    function iniciarJuego() {
+      nombreJugador = document.getElementById("nombreJugador").value.trim();
+      if (!nombreJugador) return alert("Por favor ingresá tu nombre");
+      inicioTiempo = new Date();
+      aciertos = 0;
+      errores = 0;
+      timer = 180;
+      inRevancha = false;
+      pasadas = [];
+      clearInterval(intervalo);
+      intervalo = null;
+
+      document.getElementById("inicio-juego").style.display = "none";
+      document.getElementById("rosco").style.display = "block";
+      document.getElementById("pregunta-container").style.display = "block";
+      document.getElementById("resultado").style.display = "block";
+      document.getElementById("aciertos").textContent = "0";
+      document.getElementById("errores").textContent = "0";
+      document.getElementById("tiempo").textContent = "⏱ Tiempo restante: 150s";
+      crearRosco();
+
+      const primeraLetra = document.querySelector('.letra');
+      if (primeraLetra) seleccionarLetra(primeraLetra.textContent, primeraLetra);
+    }
+
+    function crearRosco() {
+      const rosco = document.getElementById('rosco');
+      rosco.innerHTML = '';
+      letras.forEach((letra, i) => {
+        const div = document.createElement('div');
+        div.className = 'letra';
+        div.textContent = letra;
+        const angle = (360 / letras.length) * i;
+        const radius = 120;
+        const x = 130 + radius * Math.cos((angle - 90) * (Math.PI / 180));
+        const y = 130 + radius * Math.sin((angle - 90) * (Math.PI / 180));
+        div.style.left = `${x}px`;
+        div.style.top = `${y}px`;
+        div.onclick = () => seleccionarLetra(letra, div);
+        rosco.appendChild(div);
+      });
+      mostrarRanking();
+    }
+
+    function seleccionarLetra(letra, divElemento) {
+      iniciarTemporizador();
+      if (divElemento.classList.contains('usada')) return;
+      letraActual = letra;
+      if (preguntas[letra]) {
+        document.getElementById("pregunta").textContent = preguntas[letra].pregunta;
+        document.getElementById("respuesta").value = '';
+        document.getElementById("respuesta").focus();
+      }
+    }
+
+    function iniciarTemporizador() {
+      if (intervalo) return;
+      intervalo = setInterval(() => {
+        timer--;
+        document.getElementById("tiempo").textContent = `⏱ Tiempo restante: ${timer}s`;
+        if (timer <= 0) {
+          clearInterval(intervalo);
+          document.getElementById("pregunta").textContent = "⏱ ¡Tiempo terminado!";
+          if (!inRevancha && pasadas.length > 0) iniciarRevancha();
+          else guardarPuntaje();
+        }
+      }, 1000);
+    }
+
+    function verificarRespuesta() {
+      if (!letraActual) return;
+      const input = document.getElementById("respuesta");
+      const respuesta = input.value.trim().toLowerCase();
+      const correcta = preguntas[letraActual]?.respuesta.toLowerCase();
+      const letraDiv = [...document.querySelectorAll('.letra')].find(el => el.textContent === letraActual);
+
+      if (respuesta === correcta) {
+        aciertos++;
+        letraDiv.classList.add('acierto');
+      } else {
+        errores++;
+        letraDiv.classList.add('error');
+      }
+      letraDiv.classList.add('usada');
+      document.getElementById("aciertos").textContent = aciertos;
+      document.getElementById("errores").textContent = errores;
+      letraActual = '';
+      avanzarAutomaticamente();
+    }
+
+    function pasapalabra() {
+      if (!letraActual) return;
+      pasadas.push(letraActual);
+      const letraDiv = [...document.querySelectorAll('.letra')].find(el => el.textContent === letraActual);
+      letraDiv.classList.add('pasapalabra');
+      letraDiv.classList.add('usada');
+      letraActual = '';
+      avanzarAutomaticamente();
+    }
+
+    function avanzarAutomaticamente() {
+      const siguiente = [...document.querySelectorAll('.letra')].find(el => !el.classList.contains('usada'));
+      if (siguiente) {
+        seleccionarLetra(siguiente.textContent, siguiente);
+      } else {
+        clearInterval(intervalo);
+        setTimeout(() => {
+          if (!inRevancha && pasadas.length > 0) iniciarRevancha();
+          else guardarPuntaje();
+        }, 300);
+      }
+    }
+
+    function iniciarRevancha() {
+      inRevancha = true;
+      const letrasPasadas = pasadas.slice();
+      pasadas = [];
+
+      letrasPasadas.forEach(letra => {
+        const letraDiv = [...document.querySelectorAll('.letra')].find(el => el.textContent === letra);
+        if (letraDiv) {
+          letraDiv.classList.remove('usada', 'pasapalabra');
+        }
+      });
+
+      avanzarAutomaticamente();
+    }
+
+    function guardarPuntaje() {
+      const fin = new Date();
+      const tiempo = Math.round((fin - inicioTiempo) / 1000);
+      const nuevo = {
+        nombre: nombreJugador,
+        aciertos: aciertos,
+        errores: errores,
+        tiempo: tiempo,
+        fecha: fin.toLocaleString()
+      };
+      const historial = JSON.parse(localStorage.getItem("rankingRosco") || "[]");
+      historial.push(nuevo);
+      localStorage.setItem("rankingRosco", JSON.stringify(historial));
+      mostrarRanking();
+      alert(`Puntaje guardado. Aciertos: ${aciertos}, Errores: ${errores}, Tiempo: ${tiempo} segundos`);
+    }
+
+    function mostrarRanking() {
+      const tabla = document.querySelector("#tablaRanking tbody");
+      tabla.innerHTML = "";
+      const datos = JSON.parse(localStorage.getItem("rankingRosco") || "[]").reverse();
+      datos.forEach(j => {
+        const fila = `<tr><td>${j.nombre}</td><td>${j.aciertos}</td><td>${j.errores}</td><td>${j.tiempo}</td><td>${j.fecha}</td></tr>`;
+        tabla.innerHTML += fila;
+      });
+    }
+  </script>
+</body>
+</html>
